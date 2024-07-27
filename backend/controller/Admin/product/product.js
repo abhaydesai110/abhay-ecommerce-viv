@@ -1,122 +1,77 @@
-const connection = require("../../../utilities/connections");
-const mongoose = require("mongoose");
+const mongoConnection = require("../../../utilities/connections");
+const adminModal = require("../../../models/Admin/admins.model");
+const productModal = require("../../../models/Admin/Product/product.model");
 const constants = require("../../../utilities/constants");
-const productModel = require("../../../models/Admin/Product/product.model");
+const mongoose = require("mongoose");
 const responseManager = require("../../../utilities/response.manager");
-const adminModel = require("../../../models/Admin/admins.model");
 
 exports.addProduct = async (req, res) => {
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type,Authorization");
-  res.setHeader("Access-Control-Allow-Origin", "*");
-
-  const {
-    productId,
-    name,
-    description,
-    brand,
-    actualPrice,
-    discountPrice,
-    size,
-    imageWithColour,
-    quantity,
-    season,
-    fabric,
-    wash,
-  } = req.body;
-  try {
-    if (req.token._id && mongoose.Types.ObjectId.isValid(req.token._id)) {
-      console.log(
-        "mongoose.Types.ObjectId.isValid(req.token._id)",
-        mongoose.Types.ObjectId.isValid(req.token._id)
-      );
-      console.log("req.token._id", req.token._id);
-      const primary = connection.useDb(constants.DEFAULT_DB);
-      const adminData = await primary
-        .model(constants.MODELS.admins, adminModel)
-        .findById(new mongoose.Types.ObjectId(req.token._id))
-        .lean();
-      if (
-        productId &&
-        productId.trim() != "" &&
-        mongoose.Types.ObjectId.isValid(productId)
-      ) {
-        const existingProduct = await primary
-          .model(constants.MODELS.product, productModel)
-          .findOne({ name: name.trim() })
-          .lean();
-        console.log("existingProduct", existingProduct);
-        if (existingProduct) {
-          return responseManager.badrequest(
-            {
-              message:
-                "Product Name is already exist please add with Different name...!",
-            },
-            res
-          );
+  const {productId, name, description, brand, actualPrice, discountPrice, size, imageWithColour, quantity, season, fabric, wash} = req.body;
+  const primary = await mongoConnection.useDb(constants.DEFAULT_DB);
+  const adminData = await primary.model(constants.MODELS.admins, adminModal).findById(new mongoose.Types.ObjectId(req.token._id));
+  const product = await primary.model(constants.MODELS.product, productModal);
+  if (productId && productId != null && mongoose.Types.ObjectId.isValid(productId)) {
+    try {
+      const product = await primary.model(constants.MODELS.product, productModal).findById(new mongoose.Types.ObjectId(productId)).lean();
+      if (!product) {
+        return responseManager.badrequest({message: "Invalid product ID...!"}, res);
+      } else {
+        const existingName = await primary.model(constants.MODELS.product, productModal).findOne({name});
+        if (existingName) {
+          return responseManager.badrequest({message: "Name already exist..!"}, res);
         } else {
-          const object = {
-            name: name.trim(),
-
-            description: description.trim(),
-            brand: brand.trim(),
+          const obj = {
+            name: name,
+            description: description,
+            brand: brand,
             actualPrice: actualPrice,
             discountPrice: discountPrice,
             size: size,
             imageWithColour: imageWithColour,
             quantity: quantity,
-            season: season.trim(),
-            fabric: fabric.trim(),
-            wash: wash.trim(),
+            season: season,
+            fabric: fabric,
+            wash: wash,
+            isDeleted: false,
             updatedBy: new mongoose.Types.ObjectId(adminData._id),
-            update_timestamp: Date.now(),
+            updatedAt: new Date(),
           };
-          const updatedProductData = primary
-            .model(constants.MODELS.product, productModel)
-            .findByIdAndUpdate(new mongoose.Types.ObjectId(object))
-            .lean();
-          if (updatedProductData) {
-            return responseManager.onSuccess(
-              "Product data updated successfully...!",
-              updatedProductData,
-              res
-            );
-          }
+          let updatedVillageData = await primary.model(constants.MODELS.product, productModal).findByIdAndUpdate(product._id, obj, {returnOriginal: false}).lean();
+          return responseManager.onSuccess("Product updated successfully...!", updatedVillageData, res);
         }
+      }
+    } catch (error) {
+      console.log("error", error);
+      return responseManager.badrequest({message: "Error updating product"}, res);
+    }
+  } else {
+    try {
+      const existingName = await primary.model(constants.MODELS.product, productModal).findOne({name});
+      if (existingName) {
+        return responseManager.badrequest({message: "Name already exist..!"}, res);
       } else {
-        const object = {
-          name: name.trim(),
-          description: description.trim(),
-          brand: brand.trim(),
+        let obj = {
+          name: name,
+          description: description,
+          brand: brand,
           actualPrice: actualPrice,
           discountPrice: discountPrice,
           size: size,
           imageWithColour: imageWithColour,
           quantity: quantity,
-          season: season.trim(),
-          fabric: fabric.trim(),
-          wash: wash.trim(),
+          season: season,
+          fabric: fabric,
+          wash: wash,
+          isDeleted: false,
           createdBy: new mongoose.Types.ObjectId(adminData._id),
           create_timestamp: Date.now(),
         };
-        const newProductCreate = await primary
-          .model(constants.MODELS.product, productModel)
-          .create(object);
-        console.log("newProductCreate", newProductCreate);
-        if (newProductCreate) {
-          return responseManager.onSuccess(
-            "New Product added successfully...!",
-            newProductCreate,
-            res
-          );
-        }
+        let newProduct = await primary.model(constants.MODELS.product, productModal).create(obj);
+        return responseManager.onSuccess("Product created successfully...!", newProduct, res);
       }
+    } catch (error) {
+      console.log("error", error);
+      return res.status(400).json({message: "Error creating product", error});
     }
-  } catch (error) {
-    console.log("error", error);
-    console.log("error.imageWithColour", error.imageWithColour);
-    return responseManager.badrequest(
-      { message: error.errors.imageWithColour.message },
-      res
-    );
   }
 };
