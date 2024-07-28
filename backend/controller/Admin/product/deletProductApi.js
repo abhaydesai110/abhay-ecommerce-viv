@@ -1,5 +1,4 @@
 const mongoConnection = require("../../../utilities/connections");
-const adminModel = require("../../../models/Admin/admins.model");
 const productModel = require("../../../models/Admin/Product/product.model");
 const constants = require("../../../utilities/constants");
 const {default: mongoose} = require("mongoose");
@@ -11,8 +10,6 @@ exports.deleteProduct = async (req, res) => {
   const primary = mongoConnection.useDb(constants.DEFAULT_DB);
   const adminID = req.token._id;
   const {productId} = req.query;
-
-  const adminData = await primary.model(constants.MODELS.admins, adminModel).findById(new mongoose.Types.ObjectId(adminID));
   if (productId && productId != "" && mongoose.Types.ObjectId.isValid(productId)) {
     const productModelInstance = primary.model(constants.MODELS.product, productModel);
 
