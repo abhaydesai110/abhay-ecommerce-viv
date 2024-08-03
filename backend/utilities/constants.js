@@ -3,7 +3,7 @@ let constants = {
     MODELS: {
         admins: 'admins',
         product: 'product',
-        size_chart: 'size_chart',
+        designCode: 'designCode',
     }
 };
 module.exports = constants

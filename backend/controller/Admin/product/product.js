@@ -6,7 +6,7 @@ const mongoose = require("mongoose");
 const responseManager = require("../../../utilities/response.manager");
 
 exports.addProduct = async (req, res) => {
-  const {productId, name, description, brand, actualPrice, discountPrice, size, imageWithColour, quantity, season, fabric, wash} = req.body;
+  const {productId, name, designCode, description, brand, actualPrice, discountPrice, imageWithColour, quantity, season, fabric, wash} = req.body;
   const primary = await mongoConnection.useDb(constants.DEFAULT_DB);
   const adminData = await primary.model(constants.MODELS.admins, adminModal).findById(new mongoose.Types.ObjectId(req.token._id));
   const product = await primary.model(constants.MODELS.product, productModal);
@@ -20,13 +20,21 @@ exports.addProduct = async (req, res) => {
         if (existingName) {
           return responseManager.badrequest({message: "Name already exist..!"}, res);
         } else {
+          imageWithColour.forEach((item) => {
+            item.sizeChart = item.sizeChart.map((sizeItem) => {
+              return {
+                ...sizeItem,
+                SKU: `${designCode}${item.color.toUpperCase() + item.color.slice(1)}${sizeItem.size}`,
+              };
+            });
+          });
           const obj = {
             name: name,
+            designCode: designCode,
             description: description,
             brand: brand,
             actualPrice: actualPrice,
             discountPrice: discountPrice,
-            size: size,
             imageWithColour: imageWithColour,
             quantity: quantity,
             season: season,
@@ -50,13 +58,20 @@ exports.addProduct = async (req, res) => {
       if (existingName) {
         return responseManager.badrequest({message: "Name already exist..!"}, res);
       } else {
+        imageWithColour.forEach((item) => {
+          item.sizeChart = item.sizeChart.map((sizeItem) => {
+            return {
+              ...sizeItem,
+              SKU: `${designCode}${item.color.toUpperCase() + item.color.slice(1)}${sizeItem.size}`,
+            };
+          });
+        });
         let obj = {
           name: name,
           description: description,
           brand: brand,
           actualPrice: actualPrice,
           discountPrice: discountPrice,
-          size: size,
           imageWithColour: imageWithColour,
           quantity: quantity,
           season: season,
